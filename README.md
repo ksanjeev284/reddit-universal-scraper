@@ -2,82 +2,140 @@
 
 [![Docker Build & Publish](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml)
 
-A robust, dual-mode Reddit scraper designed to run on low-resource servers (like AWS Free Tier). 
+A robust, full-featured Reddit scraper that downloads **posts, images, videos, galleries, and comments**. Designed to run on low-resource servers (like AWS Free Tier).
 
 ## 🐳 Quick Start (No Installation Needed!)
 ```bash
-# Pull the pre-built image and run
-docker run -d -v $(pwd)/data:/app/data ghcr.io/ksanjeev284/reddit-universal-scraper:latest CreditCardsIndia --mode monitor
-``` 
+docker run -d -v $(pwd)/data:/app/data ghcr.io/ksanjeev284/reddit-universal-scraper:latest delhi --mode full --limit 100
+```
 
-## Features
-- **Zero API Keys Needed:** Uses RSS feeds and Public Mirrors (Redlib) to bypass API limits.
-- **Dual Modes:**
-  - `monitor`: Runs 24/7 to catch new posts via RSS.
-  - `history`: Digs into the past using mirror rotation to bypass IP blocks.
-- **Universal:** Works on any Subreddit (`r/name`) or User (`u/name`).
-- **Dockerized:** Ready to deploy in an isolated container.
+## ✨ Features
 
-## Usage
+| Feature | Description |
+|---------|-------------|
+| 📊 **Full Metadata** | Title, author, score, upvotes, awards, flair, NSFW flags |
+| 🖼️ **Image Download** | Automatically downloads all images from posts |
+| 🎬 **Video Download** | Downloads Reddit-hosted videos |
+| 🖼️ **Gallery Support** | Extracts and downloads all images from gallery posts |
+| 💬 **Comment Scraping** | Recursively scrapes all comments with threading info |
+| 🔄 **Dual Sources** | Uses old.reddit.com + Redlib mirrors for reliability |
+| 📁 **Organized Output** | Clean folder structure per subreddit |
 
-### 1. Run via Docker (Recommended)
+## 📁 Output Structure
+
+```
+data/
+└── r_delhi/
+    ├── posts.csv           # All post metadata
+    ├── comments.csv        # All comments with threading
+    └── media/
+        ├── images/         # Downloaded images & galleries
+        │   ├── abc123_0.jpg
+        │   ├── abc123_gallery_0.jpg
+        │   └── ...
+        └── videos/         # Downloaded videos
+            └── xyz789_0.mp4
+```
+
+## 🚀 Usage
+
+### Full Scrape (Posts + Media + Comments)
 ```bash
-# Build
+# Scrape r/delhi with everything
+python main.py delhi --mode full --limit 100
+
+# Scrape a user's posts
+python main.py spez --user --mode full --limit 50
+```
+
+### Posts Only (No Media Download)
+```bash
+python main.py python --mode full --no-media --limit 200
+```
+
+### Posts Only (No Comments)
+```bash
+python main.py india --mode full --no-comments --limit 100
+```
+
+### Live Monitor Mode
+```bash
+python main.py delhi --mode monitor
+```
+
+### Legacy History Mode (Posts Only, No Media)
+```bash
+python main.py delhi --mode history --limit 500
+```
+
+## 🐳 Docker Usage
+
+```bash
+# Build the image
 docker build -t reddit-scraper .
 
-# Monitor a Subreddit (e.g., r/CreditCardsIndia)
-docker run -d -v $(pwd)/data:/app/data reddit-scraper python main.py CreditCardsIndia --mode monitor
+# Full scrape with media
+docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode full --limit 100
 
-# Monitor a User (e.g., u/spez)
-docker run -d -v $(pwd)/data:/app/data reddit-scraper python main.py spez --user --mode monitor
+# Scrape without media (faster)
+docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode full --no-media --limit 500
 
-# Scrape History (Last 1000 posts)
-docker run --rm -v $(pwd)/data:/app/data reddit-scraper python main.py CreditCardsIndia --mode history --limit 1000
+# Monitor mode (runs continuously)
+docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode monitor
 ```
 
-### 2. Run Locally (Without Docker)
-```bash
-# Install dependencies
-pip install -r requirements.txt
+## 📊 CSV Output Format
 
-# Monitor a Subreddit
-python main.py python --mode monitor
+### posts.csv
+| Column | Description |
+|--------|-------------|
+| id | Reddit post ID |
+| title | Post title |
+| author | Username |
+| created_utc | Timestamp (ISO format) |
+| permalink | Reddit URL path |
+| url | External/media URL |
+| score | Net upvotes |
+| upvote_ratio | Percentage upvoted |
+| num_comments | Comment count |
+| selftext | Post body text |
+| post_type | text/image/video/gallery/link |
+| flair | Post flair text |
+| has_media | Boolean |
+| media_downloaded | Boolean |
 
-# Monitor a User
-python main.py spez --user --mode monitor
+### comments.csv
+| Column | Description |
+|--------|-------------|
+| post_permalink | Parent post URL |
+| comment_id | Reddit comment ID |
+| parent_id | Parent comment/post ID |
+| author | Username |
+| body | Comment text |
+| score | Net upvotes |
+| created_utc | Timestamp |
+| depth | Nesting level (0 = top-level) |
+| is_submitter | Is the post author |
 
-# Scrape History
-python main.py python --mode history --limit 500
-```
+## ⚙️ Command Line Options
 
-## Output
-Data is saved to the `/data` folder in CSV format:
-- `data/r_CreditCardsIndia.csv`
-- `data/u_spez.csv`
-
-## Command Line Options
 | Option | Description | Default |
 |--------|-------------|---------|
-| `target` | Name of Subreddit or User to scrape | Required |
-| `--mode` | `monitor` or `history` | `monitor` |
-| `--user` | Flag if target is a User, not Subreddit | `false` |
-| `--limit` | Max posts to scrape (History mode only) | `500` |
+| `target` | Subreddit or username | Required |
+| `--mode` | `full`, `history`, or `monitor` | `full` |
+| `--user` | Target is a user, not subreddit | `false` |
+| `--limit` | Max posts to scrape | `100` |
+| `--no-media` | Skip downloading images/videos | `false` |
+| `--no-comments` | Skip scraping comments | `false` |
 
-## How It Works
+## 🛠️ Requirements
 
-### Monitor Mode (RSS)
-- Polls Reddit's public RSS feed every 5 minutes
-- Catches new posts in real-time
-- Uses official Reddit RSS endpoints (no rate limits)
+```bash
+pip install pandas requests
+```
 
-### History Mode (Mirrors)
-- Uses public Redlib mirrors to access historical data
-- Rotates between multiple mirrors to avoid IP blocks
-- Implements cooldown periods to respect rate limits
-- Automatically resumes from where it left off
-
-## License
+## 📜 License
 MIT License - Feel free to use, modify, and distribute.
 
-## Contributing
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+## 🤝 Contributing
+Pull requests are welcome! For major changes, please open an issue first.

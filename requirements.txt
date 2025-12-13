@@ -1,2 +1,9 @@
+# Core
 pandas
 requests
+
+# Dashboard
+streamlit
+
+# Export
+openpyxl

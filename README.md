@@ -1,90 +1,148 @@
-# 🤖 Universal Reddit Scraper
+# 🤖 Universal Reddit Scraper Suite
 
 [![Docker Build & Publish](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml)
 
-A robust, full-featured Reddit scraper that downloads **posts, images, videos, galleries, and comments**. Designed to run on low-resource servers (like AWS Free Tier).
-
-## 🐳 Quick Start (No Installation Needed!)
-```bash
-docker run -d -v $(pwd)/data:/app/data ghcr.io/ksanjeev284/reddit-universal-scraper:latest delhi --mode full --limit 100
-```
+A **full-featured** Reddit scraper suite with analytics dashboard, sentiment analysis, scheduled scraping, notifications, and more!
 
 ## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
-| 📊 **Full Metadata** | Title, author, score, upvotes, awards, flair, NSFW flags |
-| 🖼️ **Image Download** | Automatically downloads all images from posts |
-| 🎬 **Video Download** | Downloads Reddit-hosted videos |
-| 🖼️ **Gallery Support** | Extracts and downloads all images from gallery posts |
-| 💬 **Comment Scraping** | Recursively scrapes all comments with threading info |
-| 🔄 **Dual Sources** | Uses old.reddit.com + Redlib mirrors for reliability |
-| 📁 **Organized Output** | Clean folder structure per subreddit |
+| 📊 **Full Scraping** | Posts, comments, images, videos, galleries |
+| 📈 **Analytics Dashboard** | Beautiful Streamlit web UI |
+| 😀 **Sentiment Analysis** | Analyze post/comment sentiment |
+| ☁️ **Keyword Extraction** | Generate word clouds |
+| 🔍 **Search & Filter** | Query scraped data with filters |
+| 📅 **Scheduled Scraping** | Cron-style job scheduling |
+| 📧 **Notifications** | Discord & Telegram alerts |
+| 🗄️ **SQLite Database** | Structured data storage |
+| 📤 **Multiple Exports** | CSV, JSON, Excel |
 
-## 📁 Output Structure
+## 🚀 Quick Start
 
-```
-data/
-└── r_delhi/
-    ├── posts.csv           # All post metadata
-    ├── comments.csv        # All comments with threading
-    └── media/
-        ├── images/         # Downloaded images & galleries
-        │   ├── abc123_0.jpg
-        │   ├── abc123_gallery_0.jpg
-        │   └── ...
-        └── videos/         # Downloaded videos
-            └── xyz789_0.mp4
-```
-
-## 🚀 Usage
-
-### Full Scrape (Posts + Media + Comments)
 ```bash
-# Scrape r/delhi with everything
+# Install dependencies
+pip install -r requirements.txt
+
+# Scrape a subreddit (posts + media + comments)
 python main.py delhi --mode full --limit 100
+
+# Launch analytics dashboard
+python main.py --dashboard
+```
+
+## 📖 Usage Guide
+
+### 🔄 Scraping Modes
+
+```bash
+# Full scrape with everything
+python main.py delhi --mode full --limit 100
+
+# History only (no media/comments - faster)
+python main.py delhi --mode history --limit 500
+
+# Live monitor (checks every 5 min)
+python main.py delhi --mode monitor
 
 # Scrape a user's posts
 python main.py spez --user --mode full --limit 50
+
+# Skip media or comments
+python main.py delhi --mode full --no-media --limit 200
+python main.py delhi --mode full --no-comments --limit 200
 ```
 
-### Posts Only (No Media Download)
-```bash
-python main.py python --mode full --no-media --limit 200
-```
-
-### Posts Only (No Comments)
-```bash
-python main.py india --mode full --no-comments --limit 100
-```
-
-### Live Monitor Mode
-```bash
-python main.py delhi --mode monitor
-```
-
-### Legacy History Mode (Posts Only, No Media)
-```bash
-python main.py delhi --mode history --limit 500
-```
-
-## 🐳 Docker Usage
+### 📊 Analytics Dashboard
 
 ```bash
-# Build the image
-docker build -t reddit-scraper .
+# Launch the web dashboard
+python main.py --dashboard
 
-# Full scrape with media
-docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode full --limit 100
-
-# Scrape without media (faster)
-docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode full --no-media --limit 500
-
-# Monitor mode (runs continuously)
-docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode monitor
+# Opens at http://localhost:8501
 ```
 
-## 📊 CSV Output Format
+**Dashboard Features:**
+- 📈 Post statistics & charts
+- 😀 Sentiment analysis
+- ☁️ Keyword extraction
+- 🔍 Search & filter interface
+- 📤 Export data
+
+### 🔍 Search Data
+
+```bash
+# Search all scraped data
+python main.py --search "credit card"
+
+# Search with filters
+python main.py --search "laptop" --min-score 100
+python main.py --search "advice" --author username
+python main.py --search "help" --subreddit delhi
+```
+
+### 😀 Analytics
+
+```bash
+# Run sentiment analysis
+python main.py --analyze delhi --sentiment
+
+# Extract top keywords
+python main.py --analyze delhi --keywords
+```
+
+### 📅 Scheduled Scraping
+
+```bash
+# Scrape every 60 minutes
+python main.py --schedule delhi --every 60
+
+# Scrape with options
+python main.py --schedule delhi --every 30 --mode full --limit 50
+```
+
+### 📧 Notifications (Discord/Telegram)
+
+**Discord:**
+```bash
+python main.py delhi --mode monitor --discord-webhook "YOUR_WEBHOOK_URL"
+```
+
+**Telegram:**
+```bash
+python main.py delhi --mode monitor \
+  --telegram-token "YOUR_BOT_TOKEN" \
+  --telegram-chat "YOUR_CHAT_ID"
+```
+
+## 📁 Project Structure
+
+```
+reddit-scraper/
+├── main.py              # Main CLI entry point
+├── config.py            # Configuration settings
+├── analytics/           # Sentiment & keyword analysis
+│   └── sentiment.py
+├── alerts/              # Discord & Telegram notifications
+│   └── notifications.py
+├── dashboard/           # Streamlit web UI
+│   └── app.py
+├── export/              # Database & export functions
+│   └── database.py
+├── scheduler/           # Cron-style scheduling
+│   └── cron.py
+├── search/              # Search & filter engine
+│   └── query.py
+└── data/                # Scraped data
+    └── r_subreddit/
+        ├── posts.csv
+        ├── comments.csv
+        └── media/
+            ├── images/
+            └── videos/
+```
+
+## 📊 Data Output
 
 ### posts.csv
 | Column | Description |
@@ -92,50 +150,51 @@ docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode monitor
 | id | Reddit post ID |
 | title | Post title |
 | author | Username |
-| created_utc | Timestamp (ISO format) |
-| permalink | Reddit URL path |
-| url | External/media URL |
 | score | Net upvotes |
-| upvote_ratio | Percentage upvoted |
 | num_comments | Comment count |
-| selftext | Post body text |
-| post_type | text/image/video/gallery/link |
-| flair | Post flair text |
-| has_media | Boolean |
-| media_downloaded | Boolean |
+| post_type | text/image/video/gallery |
+| selftext | Post body |
+| flair | Post flair |
+| is_nsfw | NSFW flag |
+| created_utc | Timestamp |
 
 ### comments.csv
 | Column | Description |
 |--------|-------------|
-| post_permalink | Parent post URL |
-| comment_id | Reddit comment ID |
-| parent_id | Parent comment/post ID |
+| comment_id | Comment ID |
+| post_permalink | Parent post |
 | author | Username |
 | body | Comment text |
-| score | Net upvotes |
-| created_utc | Timestamp |
-| depth | Nesting level (0 = top-level) |
-| is_submitter | Is the post author |
+| score | Upvotes |
+| depth | Nesting level |
 
-## ⚙️ Command Line Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `target` | Subreddit or username | Required |
-| `--mode` | `full`, `history`, or `monitor` | `full` |
-| `--user` | Target is a user, not subreddit | `false` |
-| `--limit` | Max posts to scrape | `100` |
-| `--no-media` | Skip downloading images/videos | `false` |
-| `--no-comments` | Skip scraping comments | `false` |
-
-## 🛠️ Requirements
+## 🐳 Docker
 
 ```bash
-pip install pandas requests
+# Build
+docker build -t reddit-scraper .
+
+# Full scrape
+docker run -v $(pwd)/data:/app/data reddit-scraper delhi --mode full --limit 100
+
+# Monitor mode
+docker run -d -v $(pwd)/data:/app/data reddit-scraper delhi --mode monitor
+```
+
+## ⚙️ Configuration
+
+Edit `config.py` or use environment variables:
+
+```bash
+export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+export TELEGRAM_BOT_TOKEN="123456:ABC..."
+export TELEGRAM_CHAT_ID="987654321"
 ```
 
 ## 📜 License
+
 MIT License - Feel free to use, modify, and distribute.
 
 ## 🤝 Contributing
-Pull requests are welcome! For major changes, please open an issue first.
+
+Pull requests welcome! For major changes, please open an issue first.

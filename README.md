@@ -1,6 +1,14 @@
 # 🤖 Universal Reddit Scraper
 
+[![Docker Build & Publish](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml)
+
 A robust, dual-mode Reddit scraper designed to run on low-resource servers (like AWS Free Tier). 
+
+## 🐳 Quick Start (No Installation Needed!)
+```bash
+# Pull the pre-built image and run
+docker run -d -v $(pwd)/data:/app/data ghcr.io/ksanjeev284/reddit-universal-scraper:latest CreditCardsIndia --mode monitor
+``` 
 
 ## Features
 - **Zero API Keys Needed:** Uses RSS feeds and Public Mirrors (Redlib) to bypass API limits.

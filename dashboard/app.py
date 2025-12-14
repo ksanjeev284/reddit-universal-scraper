@@ -548,85 +548,86 @@ def main():
         
         st.divider()
         
-        # Export options
-        st.subheader("📤 Export Data")
-        
-        export_format = st.selectbox("Format", ['CSV', 'JSON', 'Excel'])
-        
-        if st.button("📥 Download Posts"):
-            if export_format == 'CSV':
-                csv = posts_df.to_csv(index=False)
-                st.download_button(
-                    "Download CSV",
-                    csv,
-                    f"{selected_sub}_posts.csv",
-                    "text/csv"
-                )
-            elif export_format == 'JSON':
-                json_data = posts_df.to_json(orient='records', indent=2)
-                st.download_button(
-                    "Download JSON",
-                    json_data,
-                    f"{selected_sub}_posts.json",
-                    "application/json"
-                )
-        
-        st.divider()
-        
-        # Media Export
-        st.subheader("🖼️ Media Export")
-        
-        media_dir = Path(f"data/{selected_sub}/media")
-        if media_dir.exists():
-            images_dir = media_dir / "images"
-            videos_dir = media_dir / "videos"
+        if selected_sub:
+            # Export options
+            st.subheader("📤 Export Data")
             
-            images = list(images_dir.glob("*")) if images_dir.exists() else []
-            videos = list(videos_dir.glob("*")) if videos_dir.exists() else []
+            export_format = st.selectbox("Format", ['CSV', 'JSON', 'Excel'])
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("📷 Images", len(images))
-            with col2:
-                st.metric("🎬 Videos", len(videos))
-            with col3:
-                total_size = sum(f.stat().st_size for f in images + videos) / (1024 * 1024)
-                st.metric("💾 Total Size", f"{total_size:.1f} MB")
-            
-            if images or videos:
-                if st.button("📦 Download All Media (ZIP)"):
-                    import zipfile
-                    import io
-                    
-                    zip_buffer = io.BytesIO()
-                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                        for img in images:
-                            zf.write(img, f"images/{img.name}")
-                        for vid in videos:
-                            zf.write(vid, f"videos/{vid.name}")
-                    
+            if st.button("📥 Download Posts"):
+                if export_format == 'CSV':
+                    csv = posts_df.to_csv(index=False)
                     st.download_button(
-                        "💾 Download ZIP",
-                        zip_buffer.getvalue(),
-                        f"{selected_sub}_media.zip",
-                        "application/zip"
+                        "Download CSV",
+                        csv,
+                        f"{selected_sub}_posts.csv",
+                        "text/csv"
                     )
-                    st.success(f"✅ ZIP ready: {len(images)} images, {len(videos)} videos")
+                elif export_format == 'JSON':
+                    json_data = posts_df.to_json(orient='records', indent=2)
+                    st.download_button(
+                        "Download JSON",
+                        json_data,
+                        f"{selected_sub}_posts.json",
+                        "application/json"
+                    )
+            
+            st.divider()
+            
+            # Media Export
+            st.subheader("🖼️ Media Export")
+            
+            media_dir = Path(f"data/{selected_sub}/media")
+            if media_dir.exists():
+                images_dir = media_dir / "images"
+                videos_dir = media_dir / "videos"
                 
-                # Preview recent images
-                if images:
-                    st.write("**Recent Images:**")
-                    preview_cols = st.columns(min(5, len(images)))
-                    for i, img in enumerate(images[:5]):
-                        with preview_cols[i]:
-                            try:
-                                st.image(str(img), width=100)
-                            except:
-                                st.text(img.name[:15])
-        else:
-            st.info(f"No media found for {selected_sub}. Run with `--mode full` to download media.")
+                images = list(images_dir.glob("*")) if images_dir.exists() else []
+                videos = list(videos_dir.glob("*")) if videos_dir.exists() else []
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("📷 Images", len(images))
+                with col2:
+                    st.metric("🎬 Videos", len(videos))
+                with col3:
+                    total_size = sum(f.stat().st_size for f in images + videos) / (1024 * 1024)
+                    st.metric("💾 Total Size", f"{total_size:.1f} MB")
+                
+                if images or videos:
+                    if st.button("📦 Download All Media (ZIP)"):
+                        import zipfile
+                        import io
+                        
+                        zip_buffer = io.BytesIO()
+                        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                            for img in images:
+                                zf.write(img, f"images/{img.name}")
+                            for vid in videos:
+                                zf.write(vid, f"videos/{vid.name}")
+                        
+                        st.download_button(
+                            "💾 Download ZIP",
+                            zip_buffer.getvalue(),
+                            f"{selected_sub}_media.zip",
+                            "application/zip"
+                        )
+                        st.success(f"✅ ZIP ready: {len(images)} images, {len(videos)} videos")
+                    
+                    # Preview recent images
+                    if images:
+                        st.write("**Recent Images:**")
+                        preview_cols = st.columns(min(5, len(images)))
+                        for i, img in enumerate(images[:5]):
+                            with preview_cols[i]:
+                                try:
+                                    st.image(str(img), width=100)
+                                except:
+                                    st.text(img.name[:15])
+            else:
+                st.info(f"No media found for {selected_sub}. Run with `--mode full` to download media.")
     
-    with tab6:
+    with tab_map["📋 Job History"]:
         st.header("📋 Job History")
         
         try:
@@ -680,7 +681,7 @@ def main():
             st.error(f"Failed to load job history: {e}")
             st.info("Make sure the database is initialized.")
     
-    with tab7:
+    with tab_map["🔌 Integrations"]:
         st.header("🔌 Integrations & Settings")
         
         # REST API Section
@@ -789,25 +790,30 @@ def main():
         # Parquet Export
         st.subheader("📦 Parquet Export")
         
+        all_targets = available_data['subreddits'] + available_data['users']
+        
         col1, col2 = st.columns(2)
         with col1:
-            export_sub = st.selectbox("Select subreddit to export", subreddits, key="parquet_export")
+            export_sub = st.selectbox("Select target to export", all_targets, key="parquet_export")
         with col2:
             if st.button("📦 Export to Parquet"):
-                target_name = export_sub.replace('r_', '').replace('u_', '')
-                with st.spinner(f"Exporting {target_name} to Parquet..."):
-                    import subprocess
-                    result = subprocess.run(
-                        ["python", "main.py", "--export-parquet", target_name],
-                        capture_output=True,
-                        text=True,
-                        cwd=str(Path(__file__).parent.parent)
-                    )
-                    if result.returncode == 0:
-                        st.success(f"✅ Exported {target_name} to Parquet!")
-                        st.code(result.stdout[-500:] if len(result.stdout) > 500 else result.stdout)
-                    else:
-                        st.error(f"❌ Export failed: {result.stderr}")
+                if export_sub:
+                    target_name = export_sub.replace('r_', '').replace('u_', '')
+                    with st.spinner(f"Exporting {target_name} to Parquet..."):
+                        import subprocess
+                        result = subprocess.run(
+                            ["python", "main.py", "--export-parquet", target_name],
+                            capture_output=True,
+                            text=True,
+                            cwd=str(Path(__file__).parent.parent)
+                        )
+                        if result.returncode == 0:
+                            st.success(f"✅ Exported {target_name} to Parquet!")
+                            st.code(result.stdout[-500:] if len(result.stdout) > 500 else result.stdout)
+                        else:
+                            st.error(f"❌ Export failed: {result.stderr}")
+                else:
+                    st.error("Select a target first")
         
         # List existing parquet files
         parquet_dir = Path("data/parquet")

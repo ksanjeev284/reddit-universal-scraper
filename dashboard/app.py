@@ -72,17 +72,26 @@ def load_subreddit_data(subreddit_path):
     
     return data
 
-def get_available_subreddits():
-    """Get list of scraped subreddits."""
+def get_available_data():
+    """Get list of scraped subreddits and users."""
     data_dir = Path(__file__).parent.parent / 'data'
-    subs = []
+    data = {'subreddits': [], 'users': []}
     
     if data_dir.exists():
         for sub_dir in data_dir.iterdir():
             if sub_dir.is_dir() and (sub_dir / 'posts.csv').exists():
-                subs.append(sub_dir.name)
+                if sub_dir.name.startswith('u_'):
+                    data['users'].append(sub_dir.name)
+                elif sub_dir.name.startswith('r_'):
+                    data['subreddits'].append(sub_dir.name)
+                else:
+                    # Fallback for old/other folders, treat as subreddit
+                    data['subreddits'].append(sub_dir.name)
     
-    return sorted(subs)
+    # Sort lists
+    data['subreddits'].sort()
+    data['users'].sort()
+    return data
 
 def main():
     # Header
@@ -91,19 +100,45 @@ def main():
     # Sidebar
     st.sidebar.title("📊 Navigation")
     
-    # Get available subreddits
-    subreddits = get_available_subreddits()
+    if st.sidebar.button("🔄 Refresh List"):
+        st.rerun()
     
-    if not subreddits:
-        st.warning("No scraped data found! Run the scraper first:")
-        st.code("python main.py <subreddit> --mode full --limit 100")
-        return
+    # Get available data
+    available_data = get_available_data()
     
-    # Subreddit selector
+    # Source Selector
+    source_type = st.sidebar.radio(
+        "Source Type",
+        ["Subreddits", "Users"],
+        horizontal=True
+    )
+    
+    # Filter list based on type
+    if source_type == "Users":
+        options = available_data['users']
+        prefix_len = 2 # 'u_'
+        empty_msg = "No scraped users found."
+        icon = "👤"
+    else:
+        options = available_data['subreddits']
+        prefix_len = 2 # 'r_' is 2 chars, but some might not have it if legacy? 
+        # Actually standard scraper uses r_.
+        empty_msg = "No scraped subreddits found."
+        icon = "📁"
+    
+    if not options:
+        st.sidebar.warning(empty_msg)
+        if source_type == "Subreddits":
+            st.sidebar.code("python main.py <sub_name> ...")
+        else:
+            st.sidebar.code("python main.py <user> --user ...")
+        return # Stop execution if no data for selected type
+    
+    # Selector
     selected_sub = st.sidebar.selectbox(
-        "Select Subreddit",
-        subreddits,
-        format_func=lambda x: f"📁 {x}"
+        f"Select {source_type[:-1]}", # "Select Subreddit" or "Select User"
+        options,
+        format_func=lambda x: f"{icon} {x[2:] if x.startswith(('r_', 'u_')) else x}"
     )
     
     # Load data

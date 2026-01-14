@@ -11,6 +11,7 @@ import time
 import os
 import json
 import signal
+import io
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -153,13 +154,28 @@ def main():
         data_dir = Path(__file__).parent.parent / 'data'
         sub_path = data_dir / selected_sub
         data = load_subreddit_data(sub_path)
-        
+
         if 'posts' in data:
             posts_df = data['posts']
             comments_df = data.get('comments', pd.DataFrame())
             data_loaded = True
         else:
-            st.error("No posts data found for selected item!")
+            # Check if there's an active scraping job for this target
+            active_job_file = Path("active_job.json")
+            is_scraping = False
+            if active_job_file.exists():
+                try:
+                    with open(active_job_file, "r") as f:
+                        job = json.load(f)
+                        if job.get('target') in selected_sub:
+                            is_scraping = True
+                except:
+                    pass
+
+            if is_scraping:
+                st.info("⏳ Scraping in progress... Data will appear once the first batch is saved.")
+            else:
+                st.warning("No posts data found. This folder may be empty or scraping hasn't completed yet.")
     
     # Define Tabs
     # Data tabs only if data loaded
@@ -533,7 +549,6 @@ def main():
                     
                     # Start background process
                     import subprocess
-                    import os
                     
                     job_id = f"job_{int(time.time())}"
                     log_file = LOG_DIR / f"{job_id}.log"
@@ -578,24 +593,67 @@ def main():
             
             export_format = st.selectbox("Format", ['CSV', 'JSON', 'Excel'])
             
-            if st.button("📥 Download Posts"):
-                if export_format == 'CSV':
-                    csv = posts_df.to_csv(index=False)
-                    st.download_button(
-                        "Download CSV",
-                        csv,
-                        f"{selected_sub}_posts.csv",
-                        "text/csv"
-                    )
-                elif export_format == 'JSON':
-                    json_data = posts_df.to_json(orient='records', indent=2)
-                    st.download_button(
-                        "Download JSON",
-                        json_data,
-                        f"{selected_sub}_posts.json",
-                        "application/json"
-                    )
-            
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("📥 Download Posts"):
+                    if export_format == 'CSV':
+                        csv = posts_df.to_csv(index=False)
+                        st.download_button(
+                            "Download CSV",
+                            csv,
+                            f"{selected_sub}_posts.csv",
+                            "text/csv"
+                        )
+                    elif export_format == 'JSON':
+                        json_data = posts_df.to_json(orient='records', indent=2)
+                        st.download_button(
+                            "Download JSON",
+                            json_data,
+                            f"{selected_sub}_posts.json",
+                            "application/json"
+                        )
+                    elif export_format == 'Excel':
+                        excel_buffer = io.BytesIO()
+                        posts_df.to_excel(excel_buffer, index=False)
+                        st.download_button(
+                            "Download Excel",
+                            excel_buffer.getvalue(),
+                            f"{selected_sub}_posts.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+
+            with col2:
+                if len(comments_df) > 0:
+                    if st.button("💬 Download Comments"):
+                        if export_format == 'CSV':
+                            csv = comments_df.to_csv(index=False)
+                            st.download_button(
+                                "Download CSV",
+                                csv,
+                                f"{selected_sub}_comments.csv",
+                                "text/csv"
+                            )
+                        elif export_format == 'JSON':
+                            json_data = comments_df.to_json(orient='records', indent=2)
+                            st.download_button(
+                                "Download JSON",
+                                json_data,
+                                f"{selected_sub}_comments.json",
+                                "application/json"
+                            )
+                        elif export_format == 'Excel':
+                            excel_buffer = io.BytesIO()
+                            comments_df.to_excel(excel_buffer, index=False)
+                            st.download_button(
+                                "Download Excel",
+                                excel_buffer.getvalue(),
+                                f"{selected_sub}_comments.xlsx",
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                else:
+                    st.info("No comments available to export")
+
             st.divider()
             
             # Media Export

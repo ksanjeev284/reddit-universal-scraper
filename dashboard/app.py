@@ -735,9 +735,13 @@ def main():
             # Check if API is running
             import requests
             try:
-                resp = requests.get(f"http://localhost:{api_port}/health", timeout=1)
+                api_key = os.getenv("X_API_KEY", "").strip()
+                headers = {"x-api-key": api_key} if api_key else {}
+                resp = requests.get(f"http://localhost:{api_port}/health", headers=headers, timeout=1)
                 if resp.status_code == 200:
                     st.success("🟢 API is running")
+                elif resp.status_code == 401:
+                    st.warning("🟠 API is running but x-api-key is missing or invalid")
                 else:
                     st.warning("🟡 API responded but not healthy")
             except:

@@ -139,6 +139,18 @@ python main.py --api
 # Docs at http://localhost:8000/docs
 ```
 
+If `X_API_KEY` is set in `.env`, include the header `x-api-key: <your-key>` on requests.
+
+For local runs outside Docker, export the variables first:
+
+```bash
+cp .env.sample .env
+set -a
+source .env
+set +a
+python main.py --api
+```
+
 **Endpoints:**
 | Endpoint | Description |
 |----------|-------------|
@@ -215,6 +227,14 @@ docker-compose up -d
 # Dashboard: http://localhost:8501
 # API: http://localhost:8000/docs
 ```
+
+Create a `.env` file in the project root from the sample:
+
+```bash
+cp .env.sample .env
+```
+
+Then set `X_API_KEY` and any optional values you want. Docker Compose uses `env_file: .env` to pass them into the containers.
 
 ### Deploy to AWS/VPS
 

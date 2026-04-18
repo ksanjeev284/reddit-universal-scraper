@@ -5,11 +5,14 @@ For integration with Metabase, Grafana, DreamFactory, and other tools.
 Start with: python api/server.py
 Or: uvicorn api.server:app --reload --port 8000
 """
-from fastapi import FastAPI, Query, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List
+import os
 import sys
 from pathlib import Path
+from typing import Optional, List
+
+from fastapi import Depends, FastAPI, HTTPException, Query, Security
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -20,13 +23,29 @@ from export.database import (
     get_job_history, get_job_stats, get_database_info
 )
 
+
+API_KEY = os.getenv("X_API_KEY", "").strip()
+api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
+
+
+def require_api_key(x_api_key: str = Security(api_key_header)):
+    """Validate x-api-key when authentication is configured."""
+    if not API_KEY:
+        return None
+
+    if not x_api_key or x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing x-api-key")
+
+    return x_api_key
+
 # Create FastAPI app
 app = FastAPI(
     title="Reddit Scraper API",
     description="REST API for Reddit Scraper data. Use with Metabase, Grafana, or any tool.",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    dependencies=[Depends(require_api_key)] if API_KEY else []
 )
 
 # Enable CORS for external tools
@@ -48,6 +67,7 @@ def root():
         "name": "Reddit Scraper API",
         "version": "1.0.0",
         "docs": "/docs",
+        "auth": "x-api-key" if API_KEY else "disabled",
         "endpoints": ["/posts", "/comments", "/subreddits", "/jobs", "/stats"]
     }
 

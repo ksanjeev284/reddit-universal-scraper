@@ -601,12 +601,12 @@ def run_full_history(target, limit, is_user=False, download_media_flag=True,
     }
 
 # --- MONITOR MODE ---
-def run_monitor(target, is_user=False):
+def run_monitor(target, is_user=False, limit:int=100, use_plugins=False, scrape_comments_flag=False, csv_output=True):
     prefix = "u" if is_user else "r"
     if is_user:
-        rss_url = f"https://www.reddit.com/user/{target}/submitted.rss?limit=100"
+        rss_url = f"https://www.reddit.com/user/{target}/submitted.rss?limit={limit}"
     else:
-        rss_url = f"https://www.reddit.com/r/{target}/new.rss?limit=100"
+        rss_url = f"https://www.reddit.com/r/{target}/new.rss?limit={limit}"
 
     print(f"[{datetime.datetime.now()}] 📡 Checking RSS for {prefix}/{target}...")
     
@@ -615,16 +615,17 @@ def run_monitor(target, is_user=False):
         
         if response.status_code != 200:
             print(f"❌ RSS blocked (Status {response.status_code}), trying JSON...")
-            run_full_history(target, 25, is_user, download_media_flag=False, scrape_comments_flag=False)
+            run_full_history(target, 25, is_user, download_media_flag=False, scrape_comments_flag=scrape_comments_flag, use_plugins=use_plugins)
             return
 
         root = ET.fromstring(response.content)
         namespace = {'atom': 'http://www.w3.org/2005/Atom'}
         posts = []
+        comments = []
         
         for entry in root.findall('atom:entry', namespace):
-            posts.append({
-                "id": "",
+            p = {
+                "id": entry.find('atom:id', namespace).text,
                 "title": entry.find('atom:title', namespace).text,
                 "author": "",
                 "created_utc": entry.find('atom:published', namespace).text,
@@ -643,10 +644,37 @@ def run_monitor(target, is_user=False):
                 "has_media": False,
                 "media_downloaded": False,
                 "source": "Monitor-RSS"
-            })
-        
-        dirs = setup_directories(target, prefix)
-        save_posts_csv(posts, dirs["posts"])
+            }
+
+            if scrape_comments_flag:
+                print(f"   💬 Fetching comments for: {p['title'][:40]}...")
+                temp_comments = scrape_comments(p['permalink'].rstrip("/"), max_depth=5)
+                comments.extend(temp_comments)
+                p['num_comments']=len(temp_comments)
+
+            posts.append(p)
+
+        if csv_output:
+            # Flag to disable csv output (default = True)
+            dirs = setup_directories(target, prefix)
+            save_posts_csv(posts, dirs["posts"])
+
+        # Run plugins on collected data
+        if use_plugins and (posts or comments):
+            print("\n🔌 Running post-processing plugins...")
+            try:
+                from plugins import load_plugins, run_plugins
+                plugins = load_plugins()
+                if plugins:
+                    all_scraped_posts, all_scraped_comments = run_plugins(
+                        posts, comments, plugins
+                    )
+                    print(f"   ✅ Processed {len(all_scraped_posts)} posts with {len(plugins)} plugins")
+                    print(f"   ✅ Processed {len(all_scraped_comments)} comments with {len(plugins)} plugins")
+                else:
+                    print("   ⚠️ No plugins found")
+            except Exception as e:
+                print(f"   ⚠️ Plugin error: {e}")
 
     except Exception as e:
         print(f"❌ Monitor Error: {e}")
@@ -694,6 +722,9 @@ Commands:
     # Scraping args
     parser.add_argument("target", nargs='?', help="Subreddit or username to scrape")
     parser.add_argument("--mode", choices=["monitor", "history", "full"], default="full")
+    parser.add_argument("--monitor-interval", type=int, help="Interval in minutes for monitoring", default=5)
+    parser.add_argument("--monitor-include-comments", action="store_true", help="Include comments in monitor mode")
+    parser.add_argument("--monitor-no-csv", action="store_true", help="Reject to persist post in csv format in monitor mode")
     parser.add_argument("--user", action="store_true", help="Target is a user")
     parser.add_argument("--limit", type=int, default=100, help="Max posts to scrape")
     parser.add_argument("--no-media", action="store_true", help="Skip media download")
@@ -849,7 +880,7 @@ Commands:
             return
         
         from scheduler.cron import run_scheduled
-        run_scheduled(args.schedule, args.every, args.mode, args.limit, args.user)
+        run_scheduled(args.schedule, args.every, args.mode, args.limit, args.user, args.plugins)
         return
     
     # Regular scraping mode
@@ -861,10 +892,14 @@ Commands:
         prefix = "u" if args.user else "r"
         dirs = setup_directories(args.target, prefix)
         load_history(dirs["posts"])
-        print(f"🔄 Monitoring {prefix}/{args.target} every 5 mins...")
+        print(f"🔄 Monitoring {prefix}/{args.target} every {args.monitor_interval} mins...")
         while True:
-            run_monitor(args.target, args.user)
-            time.sleep(300)
+            run_monitor(args.target, args.user,
+                        limit=args.limit,
+                        use_plugins=args.plugins,
+                        scrape_comments_flag=args.monitor_include_comments,
+                        csv_output=not args.monitor_no_csv)
+            time.sleep(args.monitor_interval * 60)
     elif args.mode == "history":
         run_full_history(args.target, args.limit, args.user, 
                         download_media_flag=False, scrape_comments_flag=False,

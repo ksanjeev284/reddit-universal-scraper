@@ -1,0 +1,33 @@
+# Kafka Producer Configuration
+# Copy this file to kafka.properties and configure for your Kafka cluster
+
+# Required: Kafka broker address(es)
+bootstrap.servers=localhost:9092
+
+# Optional: Topic names (defaults shown)
+posts.topic=reddit-posts
+comments.topic=reddit-comments
+
+# Producer performance settings
+acks=1
+compression.type=snappy
+linger.ms=10
+batch.size=16384
+
+# Retry settings
+retries=3
+retry.backoff.ms=100
+
+# Client identification
+client.id=reddit-scraper-producer
+
+# Security settings (uncomment and configure if using SSL/SASL)
+# security.protocol=SASL_SSL
+# sasl.mechanism=PLAIN
+# sasl.username=your-username
+# sasl.password=your-password
+
+# SSL settings (if applicable)
+# ssl.ca.location=/path/to/ca-cert
+# ssl.certificate.location=/path/to/client-cert
+# ssl.key.location=/path/to/client-key

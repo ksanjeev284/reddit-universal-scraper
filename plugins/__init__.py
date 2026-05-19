@@ -78,7 +78,7 @@ def load_plugins(plugin_dir=None):
     
     plugins = []
     
-    for file in plugin_dir.glob("*.py"):
+    for file in plugin_dir.glob('**/*.py'):
         # Skip __init__.py and base files
         if file.name.startswith("_"):
             continue

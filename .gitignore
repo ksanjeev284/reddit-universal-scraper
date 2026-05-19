@@ -1,3 +1,6 @@
 data/
 __pycache__/
 .env
+.venv/
+.vscode/
+**.properties

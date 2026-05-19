@@ -20,3 +20,6 @@ uvicorn
 # System & Analytics
 psutil
 duckdb
+
+# Kafka plugin
+confluent-kafka

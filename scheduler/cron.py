@@ -174,7 +174,7 @@ class CronScheduler:
 
 
 # Simple interval-based scheduler for CLI
-def run_scheduled(target, interval_minutes, mode='full', limit=100, is_user=False):
+def run_scheduled(target, interval_minutes, mode='full', limit=100, is_user=False, use_plugins=False):
     """
     Run a scrape job on a schedule.
     
@@ -205,7 +205,8 @@ def run_scheduled(target, interval_minutes, mode='full', limit=100, is_user=Fals
                 limit,
                 is_user,
                 download_media_flag=(mode == 'full'),
-                scrape_comments_flag=(mode == 'full')
+                scrape_comments_flag=(mode == 'full'),
+                use_plugins=use_plugins
             )
             
             print(f"\n⏰ Next run in {interval_minutes} minutes...")

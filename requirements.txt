@@ -1,6 +1,7 @@
 # Core
 pandas
 requests
+psutil
 
 # Async
 aiohttp

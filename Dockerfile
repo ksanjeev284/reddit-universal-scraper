@@ -42,5 +42,5 @@ EXPOSE 8501 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Default: show help
-ENTRYPOINT ["python", "main.py"]
+# Start Streamlit dashboard
+CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]

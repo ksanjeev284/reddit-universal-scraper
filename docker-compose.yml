@@ -7,6 +7,8 @@ services:
   # Main Scraper (run scrape jobs)
   scraper:
     build: .
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data  # Persist scraped data
     command: ["--help"]   # Override with your scrape command
@@ -15,6 +17,8 @@ services:
   # REST API Server (for Metabase/Grafana integration)
   api:
     build: .
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     volumes:
@@ -22,7 +26,7 @@ services:
     command: ["--api"]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "if [ -n \"$X_API_KEY\" ]; then curl -f -H \"x-api-key: $X_API_KEY\" http://localhost:8000/health; else curl -f http://localhost:8000/health; fi"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -30,6 +34,8 @@ services:
   # Streamlit Dashboard
   dashboard:
     build: .
+    env_file:
+      - .env
     ports:
       - "8501:8501"
     volumes:

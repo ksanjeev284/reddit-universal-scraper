@@ -38,6 +38,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from api.browser_bridge import router as browser_router
+app.include_router(browser_router)
+
 
 # --- HEALTH & INFO ---
 

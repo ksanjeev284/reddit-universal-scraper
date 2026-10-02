@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Browser Collector</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header><div class="mark">BC</div><div><h1>Browser Collector</h1><p>Your browsing, organized.</p></div><span id="mode">Standalone</span></header>
+  <main>
+    <section class="stats" aria-label="Collection totals"><div><strong id="post-count">0</strong><span>Posts</span></div><div><strong id="comment-count">0</strong><span>Comments</span></div></section>
+    <div id="status" role="status" aria-live="polite">Open a Reddit tab and sign in to begin.</div>
+    <section>
+      <h2>Collect from your Reddit tab</h2>
+      <p class="hint">Capture saves loaded post/comment text, usernames and Reddit links on this device. Start only when you want to collect. Scroll and open posts to load more. <a href="privacy.html" target="_blank" rel="noopener">Privacy &amp; permissions</a></p>
+      <label>Subreddits <span>optional, comma separated</span><input id="subreddits" placeholder="python, learnpython" maxlength="1000"></label>
+      <label>Keywords <span>match any, comma separated</span><input id="keywords" placeholder="automation, data" maxlength="1000"></label>
+      <div class="row"><label>Minimum score<input id="minScore" type="number" min="0" max="1000000000" value="0"></label><label>New post limit<input id="maxPosts" type="number" min="1" max="10000" value="500"></label></div>
+      <div class="row"><label class="check"><input id="includeComments" type="checkbox" checked>Include loaded comments</label><label>New comment limit<input id="maxComments" type="number" min="0" max="20000" value="2000"></label></div>
+      <label class="check"><input id="loginConfirmed" type="checkbox">I’m signed in to Reddit in this browser</label>
+      <p class="hint">Used when the page does not expose a login indicator. Session cookies stay in your browser.</p>
+      <div class="actions"><button id="start" class="primary">Start capture</button><button id="once">Capture this page</button><button id="stop">Stop</button></div>
+    </section>
+    <section>
+      <h2>Your collection</h2><ul id="preview"></ul>
+      <div class="actions"><button id="export-json">Export JSON</button><button id="export-posts">Posts CSV</button><button id="export-comments">Comments CSV</button></div>
+      <button id="clear" class="quiet danger">Clear local collection</button>
+    </section>
+    <details><summary>Connect to the scraper app <span>optional</span></summary>
+      <p class="hint">Start the app’s API, then paste its pairing token. Collected data can be searched and analyzed in the app.</p>
+      <label>App address<input id="appUrl" type="url" value="http://127.0.0.1:8000"></label>
+      <label>Pairing token<input id="bridgeToken" type="password" autocomplete="off" spellcheck="false" placeholder="From python main.py --bridge-token" maxlength="256"></label>
+      <div class="actions"><button id="connect">Connect / test</button><button id="sync" class="primary">Send collection to app</button></div>
+      <button id="disconnect" class="quiet">Forget pairing token</button>
+      <p id="sync-status" class="hint">Standalone exports work without the app.</p>
+    </details>
+  </main>
+  <footer>No paid API service is needed for page capture. Collect only content you are authorized to use. Browser login does not grant scraping permission. Browser proxy settings remain in effect. Independent project; not affiliated with Reddit or Google. <a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a href="https://github.com/ksanjeev284/reddit-universal-scraper/issues" target="_blank" rel="noopener">Support</a></footer>
+  <script src="popup.js"></script>
+</body></html>

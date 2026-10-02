@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Collector Companion",
+  "version": "1.0.0",
+  "minimum_chrome_version": "120",
+  "icons": {"16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png"},
+  "description": "Collect loaded Reddit posts and comments while browsing, export locally, or connect to your local scraper app.",
+  "permissions": ["storage", "downloads"],
+  "host_permissions": ["https://www.reddit.com/*", "https://old.reddit.com/*", "https://reddit.com/*"],
+  "optional_host_permissions": ["http://localhost/*", "http://127.0.0.1/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_popup": "popup.html", "default_title": "Browser Collector Companion", "default_icon": {"16": "icons/icon16.png", "32": "icons/icon32.png"}},
+  "content_scripts": [{
+    "matches": ["https://www.reddit.com/*", "https://old.reddit.com/*", "https://reddit.com/*"],
+    "js": ["collector.js", "content.js"],
+    "run_at": "document_idle"
+  }],
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'"}
+}

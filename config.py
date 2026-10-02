@@ -12,7 +12,7 @@ if env_path.exists():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, val = line.split("=", 1)
-                os.environ[key.strip()] = val.strip().strip('"').strip("'")
+                os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
 
 # --- PATHS ---
 BASE_DIR = Path(__file__).parent
@@ -20,15 +20,15 @@ DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "reddit_scraper.db"
 
 # --- SCRAPER SETTINGS ---
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-# Sources: old.reddit.com for residential IPs, mirrors for data centers
-MIRRORS = [
-    "https://old.reddit.com",
-    "https://redlib.privadency.com",
-    "https://redlib.orangenet.cc",
-    "https://red.artemislena.eu"
-]
+USER_AGENT = os.getenv("REDDIT_USER_AGENT", "")
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
+REDDIT_REFRESH_TOKEN = os.getenv("REDDIT_REFRESH_TOKEN", "")
+REDDIT_ACCESS_TOKEN = os.getenv("REDDIT_ACCESS_TOKEN", "")
+REDDIT_API_BASE = "https://oauth.reddit.com"
+# Compatibility for integrations importing MIRRORS: only the official API is used.
+MIRRORS = [REDDIT_API_BASE]
+REDDIT_REQUESTS_PER_MINUTE = min(100, max(1, int(os.getenv("REDDIT_REQUESTS_PER_MINUTE", "60"))))
 
 # Rate limiting
 REQUEST_TIMEOUT = 15
@@ -64,83 +64,38 @@ SCHEDULER_TIMEZONE = "Asia/Kolkata"
 PROXY_URL = os.getenv("PROXY_URL", "")
 PROXY_COUNTRY = os.getenv("PROXY_COUNTRY", "")
 PROXY_SESSION_ID = os.getenv("PROXY_SESSION_ID", "")
-PROXY_AUTO_ROTATE = os.getenv("PROXY_AUTO_ROTATE", "true").lower() in ("true", "1", "yes")
+PROXY_AUTO_ROTATE = False  # A stable route is used; rate limits must not be bypassed.
 
 def get_formatted_proxy_url(proxy_url, country=None, session_id=None, force_rotate=False):
-    """
-    Format ScrapingAnt proxy URL to append country and session ID dynamically.
-    For standard proxies, returns the URL unchanged.
-    """
+    """Retain proxy support, including stable ScrapingAnt country/session targeting."""
+    from urllib.parse import urlsplit, urlunsplit, unquote, quote
+    import re
     if not proxy_url:
         return proxy_url
-    
-    import random
-    import string
-    from urllib.parse import urlparse, urlunparse
-    
-    try:
-        parsed = urlparse(proxy_url)
-        username = parsed.username
-        
-        if not username or not username.startswith("customer-"):
-            return proxy_url  # Not ScrapingAnt proxy
-            
-        # Parse username parts (format: customer-USERNAME[-country-cc][-sessionid-id])
-        parts = username.split("-")
-        
-        # Determine target country
-        target_country = country if country is not None else PROXY_COUNTRY
-        if target_country and target_country.lower() == "none":
-            target_country = ""
-            
-        # Determine target session ID
-        target_session = session_id if session_id is not None else PROXY_SESSION_ID
-        if target_session and target_session.lower() == "auto":
-            target_session = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-        elif target_session and target_session.lower() == "none":
-            target_session = ""
-            
-        # Build new username
-        # Keep customer-USERNAME part (typically parts[0] is 'customer' and parts[1] is the username)
-        new_username_parts = parts[:2] if len(parts) >= 2 else parts
-        
-        # Handle country code
-        # Check if country was in original username and not overwritten
-        original_country = ""
-        original_session = ""
-        
-        i = 2
-        while i < len(parts):
-            if parts[i] == "country" and i + 1 < len(parts):
-                original_country = parts[i+1]
-                i += 2
-            elif parts[i] == "sessionid" and i + 1 < len(parts):
-                original_session = parts[i+1]
-                i += 2
-            else:
-                new_username_parts.append(parts[i])
-                i += 1
-                
-        # Apply country override or retain original if not specified
-        final_country = target_country if target_country is not None else original_country
-        if final_country:
-            new_username_parts.extend(["country", final_country.lower()])
-            
-        # Apply session ID override or retain original if not specified
-        final_session = target_session if target_session is not None else original_session
-        if final_session:
-            new_username_parts.extend(["sessionid", final_session])
-            
-        new_username = "-".join(new_username_parts)
-        
-        # Reconstruct network location
-        netloc = f"{new_username}:{parsed.password}@{parsed.hostname}"
-        if parsed.port:
-            netloc += f":{parsed.port}"
-            
-        return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
-    except Exception:
+    parsed = urlsplit(proxy_url)
+    if not (parsed.hostname or "").endswith(".scrapingant.com") or not unquote(parsed.username or "").startswith("customer-"):
         return proxy_url
+    username = unquote(parsed.username)
+    original_country = re.search(r"-country-([a-zA-Z]{2})(?=-|$)", username)
+    original_session = re.search(r"-sessionid-([A-Za-z0-9_]+)(?=-|$)", username)
+    username = re.sub(r"-country-[a-zA-Z]{2}(?=-|$)|-sessionid-[A-Za-z0-9_]+(?=-|$)", "", username)
+    target_country = country if country is not None else PROXY_COUNTRY or (original_country.group(1) if original_country else "")
+    target_session = session_id if session_id is not None else PROXY_SESSION_ID or (original_session.group(1) if original_session else "")
+    if target_country and target_country.lower() != "none":
+        if not re.fullmatch(r"[A-Za-z]{2}", target_country):
+            raise ValueError("Proxy country must be a two-letter country code.")
+        username += f"-country-{target_country.lower()}"
+    if target_session and target_session.lower() not in ("none", "auto"):
+        if not re.fullmatch(r"[A-Za-z0-9_]+", target_session):
+            raise ValueError("Proxy session ID may contain letters, digits and underscores.")
+        username += f"-sessionid-{target_session}"
+    netloc = quote(username, safe="-")
+    if parsed.password is not None:
+        netloc += ":" + quote(unquote(parsed.password), safe="")
+    netloc += "@" + parsed.hostname
+    if parsed.port:
+        netloc += f":{parsed.port}"
+    return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
 
 # --- DATABASE SETTINGS ---
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")

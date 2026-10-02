@@ -7,6 +7,7 @@ services:
   # Main Scraper (run scrape jobs)
   scraper:
     build: .
+    env_file: .env
     volumes:
       - ./data:/app/data  # Persist scraped data
     command: ["--help"]   # Override with your scrape command
@@ -15,6 +16,7 @@ services:
   # REST API Server (for Metabase/Grafana integration)
   api:
     build: .
+    env_file: .env
     ports:
       - "8000:8000"
     volumes:
@@ -30,6 +32,7 @@ services:
   # Streamlit Dashboard
   dashboard:
     build: .
+    env_file: .env
     ports:
       - "8501:8501"
     volumes:

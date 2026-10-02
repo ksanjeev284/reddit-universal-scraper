@@ -1,5 +1,10 @@
 data/
 __pycache__/
+.venv/
+.extension-test-profile/
+.test-results/
+.test-browser/
+dist/
 .env
 logs/
 *.sqlite

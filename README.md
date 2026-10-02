@@ -2,7 +2,7 @@
 
 [![Docker Build & Publish](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ksanjeev284/reddit-universal-scraper/actions/workflows/docker-publish.yml)
 
-A **full-featured** Reddit scraper with analytics dashboard, REST API, scheduled scraping, plugins, and more. **No API keys required!**
+A **full-featured** Reddit scraper with analytics dashboard, REST API, scheduled scraping, plugins, and more. **Two collection modes: free browser-page capture, or approved OAuth API access.**
 
 <img width="2558" height="1331" alt="image" src="https://github.com/user-attachments/assets/180b89ce-db02-4cd2-922d-aa3d1b8eeda7" />
 
@@ -10,7 +10,7 @@ A **full-featured** Reddit scraper with analytics dashboard, REST API, scheduled
 
 | Feature | Description |
 |---------|-------------|
-| 📊 **Full Scraping** | Posts, comments, images, videos, galleries |
+| 📊 **Full Scraping** | Available posts, loaded comments, images, videos, galleries |
 | 📈 **Web Dashboard** | Beautiful Streamlit UI with 7 tabs |
 | 🚀 **REST API** | Connect Metabase, Grafana, DuckDB |
 | 🔌 **Plugin System** | Extensible post-processing (sentiment, dedupe, keywords) |
@@ -30,6 +30,10 @@ A **full-featured** Reddit scraper with analytics dashboard, REST API, scheduled
 # Install dependencies
 pip install -r requirements.txt
 
+# Configure approved API credentials (see .env.example)
+# Copy .env.example to .env only if you do not already have .env
+python main.py --check-access
+
 # Scrape a subreddit
 python main.py python --mode full --limit 100
 
@@ -40,7 +44,7 @@ python main.py --dashboard
 
 ### 📋 Requirements
 
-- **Python 3.8+**
+- **Python 3.10+**
 - **ffmpeg** (optional, for video with audio)
 
 ```bash
@@ -56,55 +60,36 @@ sudo apt install ffmpeg
 
 ---
 
-## 🔒 Proxies
+## Free browser extension
 
-To prevent IP blocks, rate limits, and captcha challenges when scraping Reddit at scale, you can configure proxies. Both the standard synchronous scraper and the asynchronous scraper support HTTP and HTTPS proxies.
+The [Browser Collector Companion](extension/README.md) works independently in Chrome/Edge while you browse Reddit signed in. It captures loaded posts, comments and media links, supports filters and session limits, and exports JSON or CSV without paid services or API keys. It can also send collections to the application for database storage, dashboard analytics and search. Collect only data you are authorized to use.
 
-### Configuration
+Load the `extension/` folder through **Developer mode → Load unpacked**, reload Reddit, then use **Start capture** or **Capture this page**. It observes loaded content as you browse; it does not retrieve an entire archive or automatically expand unloaded comments.
 
-You can configure proxies in four ways:
+```bash
+# Connect the extension to the application
+python main.py --api
+# In another terminal: copy this pairing token into the extension
+python main.py --bridge-token
 
-1. **Command Line / CLI**:
-   Pass the `--proxy` flag to override global configurations:
-   ```bash
-   python main.py python --limit 100 --proxy "http://username:password@host:port"
-   ```
-2. **Environment Variable**:
-   ```bash
-   export PROXY_URL="http://username:password@host:port"
-   ```
-3. **Configuration File**:
-   Update `config.py` with your default proxy URL:
-   ```python
-   PROXY_URL = "http://username:password@host:port"
-   ```
-4. **Web Dashboard**:
-   Provide the **Proxy URL (Optional)** in the Scraper control tab when starting a scrape.
+# Or import a standalone JSON export without starting the API
+python main.py --import-browser path/to/export.json
 
----
+# Build the unpackable release ZIP
+python scripts/package_extension.py
+```
 
-### Recommended Proxy Providers
+Pairing uses optional localhost permissions and a local token. The browser's Reddit cookies remain in the browser. Python proxy support remains available, including stable country/session targeting; the extension uses your existing browser proxy settings.
 
-#### ScrapingAnt Proxies
+## Reddit access and reliability
 
-For reliable scraping performance, we recommend **[ScrapingAnt](https://scrapingant.com/?ref=yjk4mme)**. They provide high-performance datacenter proxies (for speed and economy) and residential proxies (for bypassing strict blocks).
+Reddit blocks unauthenticated API traffic. The direct Python scraper uses `oauth.reddit.com` with a descriptive User-Agent, cached OAuth tokens, token renewal, bounded retries and shared request pacing. Both sync and async scrapers respect `Retry-After` and Reddit rate-limit headers. API requests are serialized within each client; media downloads remain concurrent. Independent processes share your app quota, so schedule them accordingly.
 
-> [!TIP]
-> **ScrapingAnt Integration Note**: ScrapingAnt usernames must be prefixed with `customer-` (e.g., `customer-YOUR_USERNAME`). When integrating ScrapingAnt with Python `requests` or `aiohttp`, use the **HTTPS** proxy protocol on port **443** (e.g., `https://customer-YOUR_USERNAME:PASSWORD@datacenter.scrapingant.com:443`) for correct secure SSL tunnel authentication.
+See [Reddit access setup](docs/reddit-access.md) for credentials, restrictions, troubleshooting and the Developer Platform migration timeline. Missing credentials, denied access, HTML responses and exhausted retries produce explicit failures. CLI failures exit with status 1; jobs preserve collected posts and report failed status when a later request fails.
 
-#### 🛜 Datacenter Proxies (Fast & Cost-Effective)
-Great for scraping mirrors and moderate-volume queries:
-* **[Get ScrapingAnt Datacenter Proxies](https://scrapingant.com/datacenter-proxies?ref=yjk4mme)**
-* Apply coupon code **`ENTHUSIAST_50`** during checkout for a **50% discount** on the Enthusiast plan.
+An optional stable network proxy can be configured with `PROXY_URL` or `--proxy`. ScrapingAnt country/session targeting is available through `PROXY_COUNTRY` / `--proxy-country` and `PROXY_SESSION_ID` / `--proxy-session`. `--proxy none` disables it. Mirrors, browser impersonation, warm-up requests and automatic proxy rotation are no longer used. A proxy does not grant API approval.
 
-[![ScrapingAnt Datacenter Proxies](docs/datacenterproxies.png)](https://scrapingant.com/datacenter-proxies?ref=yjk4mme)
-
-#### 🏠 Residential Proxies (Highly Anonymous)
-The gold standard for undetected scraping. Bypasses strict anti-scraping protections:
-* **[Get ScrapingAnt Residential Proxies](https://scrapingant.com/residential-proxies?ref=yjk4mme)**
-* Apply coupon code **`MICRO_50`** during checkout for a **50% discount** on the Micro residential plan.
-
-[![ScrapingAnt Residential Proxies](docs/ResidentialProxies.png)](https://scrapingant.com/residential-proxies?ref=yjk4mme)
+Listings expose a limited window of posts, not a complete historical archive. Comment collection includes the initially loaded tree up to the configured depth; `more` placeholders are not expanded. Deleted or restricted content cannot be recovered.
 
 ---
 
@@ -113,7 +98,7 @@ The gold standard for undetected scraping. Bypasses strict anti-scraping protect
 ### 🔄 Scraping
 
 ```bash
-# Full scrape (posts + media + comments)
+# Collect available posts + media + loaded comments
 python main.py delhi --mode full --limit 100
 
 # Fast history-only (no media/comments)
@@ -251,10 +236,10 @@ python main.py --analyze delhi --keywords
 docker build -t reddit-scraper .
 
 # Run scrape
-docker run -v ./data:/app/data reddit-scraper python --limit 100
+docker run --env-file .env -v ./data:/app/data reddit-scraper python --limit 100
 
 # Run with plugins
-docker run -v ./data:/app/data reddit-scraper python --plugins
+docker run --env-file .env -v ./data:/app/data reddit-scraper python --plugins
 ```
 
 ### Docker Compose (Full Stack)

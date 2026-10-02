@@ -88,7 +88,7 @@ class CronScheduler:
             prefix = "u/" if job['is_user'] else "r/"
             print(f"\n🚀 Running scheduled job: {prefix}{job['target']}")
             
-            run_full_history(
+            result = run_full_history(
                 job['target'],
                 job['limit'],
                 job['is_user'],
@@ -98,6 +98,8 @@ class CronScheduler:
             
             job['last_run'] = datetime.now()
             job['run_count'] += 1
+            if result.get('error'):
+                raise RuntimeError(result['error'])
             print(f"✅ Job completed: {prefix}{job['target']}")
             
         except Exception as e:

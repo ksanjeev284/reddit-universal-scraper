@@ -142,7 +142,7 @@ def init_database():
     
     conn.commit()
     conn.close()
-    print("✅ Database initialized")
+    print("Database initialized")
 
 def save_post(post_data, subreddit):
     """Save a single post to database."""

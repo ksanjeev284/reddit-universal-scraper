@@ -617,86 +617,40 @@ def main():
                 mode = st.selectbox(
                     "Mode", 
                     ['full', 'history'],
-                    help="**full**: Download posts + comments + media files\n\n**history**: Posts + comments only (faster, no media)")
+                    help="**full**: Download posts + comments + media files\n\n**history**: Posts only (no comments or media)")
             
             no_media = st.checkbox("Skip media download")
             no_comments = st.checkbox("Skip comments")
             
-            # --- PROXY SETTINGS SECTION ---
-            with st.expander("🔒 Proxy Settings", expanded=False):
-                st.markdown("""
-                <div style='background: linear-gradient(135deg, #FF4500, #FF8C00); padding: 15px; border-radius: 8px; color: white; margin-bottom: 15px;'>
-                    <h4 style='color: white; margin-top: 0;'>🚀 ScrapingAnt Proxies Recommended</h4>
-                    <p>Prevent IP blocks with <a href='https://scrapingant.com/?ref=yjk4mme' target='_blank' style='color: #FFE4B5; text-decoration: underline; font-weight: bold;'>ScrapingAnt</a>. Use these exclusive coupons at checkout:</p>
-                    <ul style='margin-bottom: 0;'>
-                        <li><b><code>ENTHUSIAST_50</code></b> : 50% off Enthusiast plan</li>
-                        <li><b><code>MICRO_50</code></b> : 50% off Micro residential plan</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                proxy_provider = st.selectbox(
-                    "Proxy Mode",
-                    ["Default (from .env)", "No Proxy (Direct Connection)", "Custom Proxy", "ScrapingAnt (Datacenter)", "ScrapingAnt (Residential)"],
-                    index=0,
-                    help="Choose your proxy configuration. Select 'Default' to use whatever is configured in your .env file."
-                )
-                
+            st.info("Scraping uses approved Reddit OAuth API access. Configure REDDIT_USER_AGENT and "
+                    "REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET (or REDDIT_ACCESS_TOKEN) in .env.")
+            st.caption("Run python main.py --check-access to test access without saving content. "
+                       "Listings provide limited recent history; comments include the loaded tree only.")
+            with st.expander("Network proxy (optional)", expanded=False):
+                proxy_provider = st.selectbox("Proxy Mode", ["Default (from .env)", "Direct Connection", "Custom Proxy"])
                 proxy_to_pass = ""
-                
                 if proxy_provider == "Custom Proxy":
-                    proxy_to_pass = st.text_input("Custom Proxy URL", placeholder="e.g. http://username:password@host:port")
-                
-                elif proxy_provider in ["ScrapingAnt (Datacenter)", "ScrapingAnt (Residential)"]:
-                    col_user, col_pass = st.columns(2)
-                    with col_user:
-                        sa_user = st.text_input("ScrapingAnt Username", placeholder="e.g. sa_user_12345")
-                    with col_pass:
-                        sa_pass = st.text_input("ScrapingAnt Password", type="password", placeholder="e.g. sa_pass_abcde12345")
-                    
-                    st.markdown("**Advanced Targeting (Optional)**")
-                    col_country, col_session = st.columns(2)
-                    with col_country:
-                        countries = ["None", "US", "UK", "CA", "HK", "SG", "ES", "FR", "IT", "DE", "AT", "RO", "BR", "IN"]
-                        sa_country = st.selectbox("Target Country", countries, index=0)
-                    with col_session:
-                        sa_session = st.text_input("Sticky Session ID", placeholder="e.g. session_123")
-                    
-                    if sa_user and sa_pass:
-                        username_parts = []
-                        clean_user = sa_user.replace("customer-", "").strip()
-                        username_parts.append(f"customer-{clean_user}")
-                        
-                        if sa_country != "None":
-                            username_parts.append(f"country-{sa_country.lower()}")
-                        
-                        if sa_session.strip():
-                            username_parts.append(f"sessionid-{sa_session.strip()}")
-                        
-                        final_username = "-".join(username_parts)
-                        
-                        if proxy_provider == "ScrapingAnt (Datacenter)":
-                            proxy_to_pass = f"https://{final_username}:{sa_pass}@datacenter.scrapingant.com:443"
-                        else:
-                            proxy_to_pass = f"https://{final_username}:{sa_pass}@residential.scrapingant.com:443"
-                        
-                        st.success("🔗 ScrapingAnt Proxy URL constructed successfully!")
-                    else:
-                        st.info("💡 Fill in your ScrapingAnt credentials to construct the proxy link.")
-                
-                elif proxy_provider == "No Proxy (Direct Connection)":
+                    proxy_to_pass = st.text_input("Proxy URL", type="password")
+                elif proxy_provider == "Direct Connection":
                     proxy_to_pass = "none"
-            
+                proxy_country = st.text_input("Proxy country code (optional)", max_chars=2)
+                proxy_session = st.text_input("Stable proxy session ID (optional)")
+                st.caption("Country/session targeting is supported for ScrapingAnt proxies. The extension uses your browser's proxy settings.")
+
             if st.button("🚀 Start Scraping"):
                 if not new_sub:
                     st.error("Please enter a subreddit/user name!")
                 else:
-                    target_cmd = ["python", "-u", "main.py", new_sub, "--mode", mode, "--limit", str(limit)]
+                    target_cmd = [sys.executable, "-u", "main.py", new_sub, "--mode", mode, "--limit", str(limit)]
                     if is_user: target_cmd.append("--user")
                     if no_media: target_cmd.append("--no-media")
                     if no_comments: target_cmd.append("--no-comments")
                     if proxy_to_pass.strip():
                         target_cmd.extend(["--proxy", proxy_to_pass.strip()])
+                    if proxy_country.strip():
+                        target_cmd.extend(["--proxy-country", proxy_country.strip()])
+                    if proxy_session.strip():
+                        target_cmd.extend(["--proxy-session", proxy_session.strip()])
                     
                     # Start background process
                     import subprocess
@@ -874,6 +828,24 @@ def main():
     with tab_map["🔌 Integrations"]:
         st.header("🔌 Integrations & Settings")
         
+        st.subheader("Browser extension · free page capture")
+        st.write("Load the extension folder in Chrome or Edge, sign in to Reddit, and collect loaded content as you browse. "
+                 "It works independently with JSON/CSV exports, or sends data to this app's API.")
+        st.code("python main.py --api\npython main.py --bridge-token", language="bash")
+        st.caption("Paste the pairing token into the extension's Connect section. Browser cookies stay in your browser.")
+        browser_export = st.file_uploader("Import extension JSON export", type=["json"], key="browser_import")
+        if browser_export is not None and st.button("Import browser collection"):
+            try:
+                from export.browser_import import import_bundle, MAX_IMPORT_BYTES
+                if browser_export.size > MAX_IMPORT_BYTES:
+                    raise ValueError("Export exceeds the 20 MB file import limit.")
+                result = import_bundle(json.load(browser_export))
+                st.success(f"Imported {result['posts_added']} posts and {result['comments_added']} comments; "
+                           f"{result['duplicates']} duplicates skipped. Refresh the source list to see imported subreddits.")
+            except (ValueError, OSError) as error:
+                st.error(f"Import failed: {error}")
+        st.divider()
+
         # REST API Section
         st.subheader("🚀 REST API")
         
@@ -890,7 +862,7 @@ def main():
                     subprocess.Popen(
                         ["python", "main.py", "--api"],
                         cwd=str(Path(__file__).parent.parent),
-                        creationflags=subprocess.CREATE_NEW_CONSOLE if hasattr(subprocess, 'CREATE_NEW_CONSOLE') else 0
+                        creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
                     )
                     st.success(f"✅ API server starting on port {api_port}!")
                     st.markdown(f"**Open:** [http://localhost:{api_port}/docs](http://localhost:{api_port}/docs)")

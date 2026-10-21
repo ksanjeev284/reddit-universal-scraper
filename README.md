@@ -62,7 +62,7 @@ sudo apt install ffmpeg
 
 ## Free browser extension
 
-The [Browser Collector Companion](extension/README.md) works independently in Chrome/Edge while you browse Reddit signed in. It captures loaded posts, comments and media links, supports filters and session limits, and exports JSON or CSV without paid services or API keys. It can also send collections to the application for database storage, dashboard analytics and search. Collect only data you are authorized to use.
+The [Browser Collector Companion](https://chromewebstore.google.com/detail/browser-collector-compani/ejakgladboompmmodkjeabbhojmjofmn) works independently in Chrome/Edge while you browse Reddit signed in. It captures loaded posts, comments and media links, supports filters and session limits, and exports JSON or CSV without paid services or API keys. It can also send collections to the application for database storage, dashboard analytics and search. Collect only data you are authorized to use.
 
 Load the `extension/` folder through **Developer mode → Load unpacked**, reload Reddit, then use **Start capture** or **Capture this page**. It observes loaded content as you browse; it does not retrieve an entire archive or automatically expand unloaded comments.
 
